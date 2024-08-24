@@ -1,8 +1,8 @@
-# Automatic Light Control Based on GPS Time
+# Automatic Offline Light Control Based on GPS Time
 
 ## Overview
 
-This Arduino project controls the turning on and off of a device, such as a light, at multiple times during the day based on the time retrieved from a GPS module. The project uses an Arduino Uno and a NEO-6M GPS module to get the current UTC time, converts it to the local time according to the specified time zone offset, and controls a relay to turn the device on or off based on predefined time windows.
+This Arduino project controls the turning on and off of a device, such as a light, at multiple times during the day based on the time retrieved from a GPS module (offline, no internet required). The project uses an Arduino Uno and a NEO-6M GPS module to get the current UTC time, converts it to the local time according to the specified time zone offset, and controls a relay to turn the device on or off based on predefined time windows.
 
 ## Features
 
