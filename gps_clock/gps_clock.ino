@@ -14,16 +14,23 @@
 
   Notes:
   Make sure to adjust the time zone offset according to your location.
+  Connection must be set at 9600
 */
 
 #include <NeoSWSerial.h>
 #include <TinyGPSPlus.h>
 
+// Declare variables
 // GPS pin. RX Arduino = TX GPS 
 // TX Arduino = RX GPS
 const int RXPin = 4, TXPin = 3;
-const uint32_t GPSBaud = 9600;
+const uint32_t GPSBaud = 9600, serialBaud = 9600;
 const int offset = -3;
+bool fixStatus, turnOn;
+uint32_t hour, minute, second, currentTimeSeconds;
+uint32_t startHour1, startMinute1, startSecond1, endHour1, endMinute1, endSecond1, startTimeSeconds1, endTimeSeconds1;
+uint32_t startHour2, startMinute2, startSecond2, endHour2, endMinute2, endSecond2, startTimeSeconds2, endTimeSeconds2;
+uint32_t startHour3, startMinute3, startSecond3, endHour3, endMinute3, endSecond3, startTimeSeconds3, endTimeSeconds3;
 
 // Creates GPS object
 TinyGPSPlus gps;
@@ -31,10 +38,37 @@ NeoSWSerial neogps(RXPin, TXPin);
 
 int relayPin = 7; // Relay
 
+bool checkGPSFix()
+{
+  while ((neogps.available() > 0))
+  {
+    if (gps.encode(neogps.read()))
+    {
+      if ((gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) &&
+          (gps.location.isUpdated() && gps.date.isUpdated() && gps.time.isUpdated()) &&
+          (gps.satellites.value() > 0))
+      {
+        fixStatus = true;
+        Serial.print("Fix status: ");
+        Serial.println(fixStatus);
+        return fixStatus;
+      }
+    }
+  }
+  return 0;
+}
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(serialBaud);
   neogps.begin(GPSBaud);
+  
   Serial.println("Waiting for GPS...");
+  while (!checkGPSFix())
+  {
+    ;
+  }
+  Serial.println("Valid GPS signal established.");
+  
   pinMode(relayPin, OUTPUT);
   digitalWrite(relayPin, LOW); // Turn off by default
 }
@@ -43,65 +77,118 @@ void loop() {
   while (neogps.available() > 0) {
     gps.encode(neogps.read());
   
-    if (gps.time.isUpdated()) {
-      int hour = gps.time.hour(); // UTC current Time 
-      int minute = gps.time.minute();      
-      int second = gps.time.second();      
+    if (gps.time.isUpdated() && gps.satellites.value() > 0) {
+      hour = gps.time.hour(); // UTC current Time 
+      minute = gps.time.minute();      
+      second = gps.time.second();      
 
       // Adjust hour based on time zone offset
-      hour = (hour + offset) % 24;
+      hour = (hour + offset);
       if (hour < 0) {
         hour += 24;
       }
 
-      // Define time windows for turning on and off
-      int startHour1 = 0, startMinute1 = 18, startSecond1 = 0;
-      int endHour1 = 0, endMinute1 = 18, endSecond1 = 5;
-  
-      int startHour2 = 0, startMinute2 = 18, startSecond2 = 10;
-      int endHour2 = 0, endMinute2 = 18, endSecond2 = 15;
-  
-      int startHour3 = 0, startMinute3 = 18, startSecond3 = 20;
-      int endHour3 = 0, endMinute3 = 18, endSecond3 = 25;
-  
-      // Check if the current time is within any turn-on window
-      bool turnOn = false;
-  
-      if ((hour >= startHour1 && minute >= startMinute1 && second >= startSecond1) && 
-          (hour <= endHour1 && minute <= endMinute1 && second <= endSecond1)) {
-        turnOn = true;
-        Serial.print("TurnOn: 1 |");
+      if (hour > 23) {
+        hour -= 24;
       }
+
+      // Convert current time and range times to minutes
+      currentTimeSeconds = (hour * 3600) + (minute * 60) + second;
       
-      if ((hour >= startHour2 && minute >= startMinute2 && second >= startSecond2) && 
-          (hour <= endHour2 && minute <= endMinute2 && second <= endSecond2)) {
-        turnOn = true;
-        Serial.print("TurnOn: 2 |");
-      }
+      //
+      // SCHEDULE 1
+      //
+      // Define time windows for turning on and off
+      startHour1 = 8, startMinute1 = 0, startSecond1 = 0;
+      endHour1 = 8, endMinute1 = 0, endSecond1 = 30;
+      
+      // Convert start and end times to seconds from start of the day
+      startTimeSeconds1 = ((startHour1 * 3600) + (startMinute1 * 60) + startSecond1);
+      endTimeSeconds1 = ((endHour1 * 3600) + (endMinute1 * 60) + endSecond1);
   
-      if ((hour >= startHour3 && minute >= startMinute3 && second >= startSecond3) && 
-          (hour <= endHour3 && minute <= endMinute3 && second <= endSecond3)) {
-        turnOn = true;
-        Serial.print("TurnOn: 3 |");
-      }
+      //
+      // SCHEDULE 2
+      //
+      startHour2 = 12, startMinute2 = 0, startSecond2 = 0;
+      endHour2 = 12, endMinute2 = 1, endSecond2 = 0;
+      
+      // Convert start and end times to seconds from start of the day
+      startTimeSeconds2 = ((startHour2 * 3600) + (startMinute2 * 60) + startSecond2);
+      endTimeSeconds2 = ((endHour2 * 3600) + (endMinute2 * 60) + endSecond2);
+
+      //
+      // SCHEDULE 3
+      //
+      startHour3 = 21, startMinute3 = 0, startSecond3 = 0;
+      endHour3 = 21, endMinute3 = 1, endSecond3 = 0;
+      
+       // Convert start and end times to seconds from start of the day
+      startTimeSeconds3 = ((startHour3 * 3600) + (startMinute3 * 60) + startSecond3);
+      endTimeSeconds3 = ((endHour3 * 3600) + (endMinute3 * 60) + endSecond3);
+      
+      // Check if the current time is within any turn-on window
+      turnOn = false;
   
+      // Check if the interval crosses midnight
+      if (startTimeSeconds1 < endTimeSeconds1) {
+        // Interval does not cross midnight
+        if (currentTimeSeconds >= startTimeSeconds1 && currentTimeSeconds < endTimeSeconds1) {
+          turnOn = true;
+        }
+      } else {
+        // Interval crosses midnight
+        if (currentTimeSeconds >= startTimeSeconds1 || currentTimeSeconds < endTimeSeconds1) {
+          turnOn = true;
+        }
+      }
+
+      // Check if the interval crosses midnight
+      if (startTimeSeconds2 < endTimeSeconds2) {
+        // Interval does not cross midnight
+        if (currentTimeSeconds >= startTimeSeconds2 && currentTimeSeconds < endTimeSeconds2) {
+          turnOn = true;
+        }
+      } else {
+        // Interval crosses midnight
+        if (currentTimeSeconds >= startTimeSeconds2 || currentTimeSeconds < endTimeSeconds2) {
+          turnOn = true;
+        }
+      }
+
+      // Check if the interval crosses midnight
+      if (startTimeSeconds3 < endTimeSeconds3) {
+        // Interval does not cross midnight
+        if (currentTimeSeconds >= startTimeSeconds3 && currentTimeSeconds < endTimeSeconds3) {
+          turnOn = true;
+        }
+      } else {
+        // Interval crosses midnight
+        if (currentTimeSeconds >= startTimeSeconds3 || currentTimeSeconds < endTimeSeconds3) {
+          turnOn = true;
+        }
+      }
+ 
       // Control the relay based on the time check
       if (turnOn) {
         digitalWrite(relayPin, HIGH); // Turn on
         Serial.println("Relay set to HIGH - On");
+        writeTime();
       } else {
         digitalWrite(relayPin, LOW); // Turn off
         Serial.println("Relay set to LOW - Off");
+        writeTime();
       }
-      
-      // Print current time for debugging
-      Serial.print("Time: ");
-      Serial.print(hour);
-      Serial.print(":");
-      Serial.print(minute);
-      Serial.print(":");
-      Serial.println(gps.time.second());
-
+//      delay(10000);              // for troubleshooting purposes
     }
   }
+}
+
+void writeTime() {
+  Serial.print(hour);
+  Serial.print(":");
+  Serial.print(minute);
+  Serial.print(":");
+  Serial.print(second);
+  Serial.print(":");
+  Serial.println(currentTimeSeconds);
 }
