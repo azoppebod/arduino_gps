@@ -29,13 +29,12 @@ This Arduino project controls the turning on and off of a device, such as a ligh
 - **GPS Module**:
   - TX (GPS) → RX (Arduino Pin 4)
   - RX (GPS) → TX (Arduino Pin 3)
-  - VCC → 5V
-  - GND → GND
+  - VCC → 5V (Arduino)
+  - GND → GND (Arduino)
 
 - **Relay Module**:
-  - IN (Relay) → Pin 7 (Arduino)
-  - VCC → 5V
-  - GND → GND
+  - VCC IN (Relay) → Pin 7 5V (Arduino)
+  - GND → GND (Arduino)
 
 ## Installation
 
