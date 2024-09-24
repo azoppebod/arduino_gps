@@ -1,84 +1,72 @@
-# Automatic Offline Light Control Based on GPS Time
+# Automatic Light Control Based on GPS Time
 
-## Overview
+### Project Overview
+This project is designed to automate the control of a relay (e.g., for a light) based on time, using an Arduino Uno and a NEO-6M GPS module. The system retrieves accurate time from the GPS satellites, adjusts it to the local time zone, and turns the relay on or off according to multiple pre-defined time intervals.
 
-This Arduino project controls the turning on and off of a device, such as a light, at multiple times during the day based on the time retrieved from a GPS module (offline, no internet required). The project uses an Arduino Uno and a NEO-6M GPS module to get the current UTC time, converts it to the local time according to the specified time zone offset, and controls a relay to turn the device on or off based on predefined time windows.
+The use of a GPS module ensures that the system remains synchronized with the correct time, even after power loss or resets, making it perfect for time-sensitive automation tasks.
 
-## Features
+### Features
+- **GPS Time Synchronization**: Retrieves accurate UTC time from GPS satellites.
+- **Local Time Conversion**: Adjusts the time to the local time zone with a customizable offset.
+- **Relay Control**: Automatically switches the relay on or off based on defined time intervals.
+- **LCD Display**: Shows current time, satellite count, and system status on a 16x2 LCD.
+- **Multiple Schedules**: Configure multiple time intervals during the day for controlling the relay.
 
-- **Automatic Light Control**: The relay is turned on or off at specific times of the day based on the GPS time.
-- **Multiple Time Windows**: Supports multiple time windows for controlling the device.
-- **Time Zone Adjustment**: Adjusts the UTC time retrieved from the GPS module to the local time using a configurable time zone offset.
-- **Serial Output for Debugging**: Prints the current time and relay state to the serial monitor for easy debugging.
-
-## Hardware Requirements
-
+### Hardware Requirements
 - Arduino Uno
 - NEO-6M GPS Module
+- 16x2 LCD with I2C interface
 - Relay Module
-- Connecting wires
+- Jumper Wires
+- Breadboard (optional)
 
-## Software Requirements
+### Software Requirements
+- Arduino IDE (version 1.8.19 or later)
+- Libraries:
+  - [TinyGPS++](https://github.com/mikalhart/TinyGPSPlus)
+  - [NeoSWSerial](https://github.com/SlashDevin/NeoSWSerial)
+  - [LiquidCrystal_I2C](https://github.com/johnrickman/LiquidCrystal_I2C)
 
-- [Arduino IDE](https://www.arduino.cc/en/software)
-- [TinyGPS++ Library](https://github.com/mikalhart/TinyGPSPlus)
-- [NeoSWSerial Library](https://github.com/SlashDevin/NeoSWSerial)
-
-## Circuit Connections
-
+### Wiring Diagram
 - **GPS Module**:
-  - TX (GPS) → RX (Arduino Pin 4)
-  - RX (GPS) → TX (Arduino Pin 3)
-  - VCC → 5V (Arduino)
-  - GND → GND (Arduino)
-
+  - TX (GPS) -> RX (Arduino Pin 4)
+  - RX (GPS) -> TX (Arduino Pin 3)
+  - VCC -> 5V
+  - GND -> GND
+- **LCD Display**:
+  - SDA -> A4
+  - SCL -> A5
+  - VCC -> 5V
+  - GND -> GND
 - **Relay Module**:
-  - VCC IN (Relay) → Pin 7 5V (Arduino)
-  - GND → GND (Arduino)
+  - IN -> Arduino Pin 7
+  - VCC -> 5V
+  - GND -> GND
 
-## Installation
-
-1. Clone the repository or download the `.zip` file.
+### Installation
+1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/automatic-light-control.git
-2. Open the project in the Arduino IDE.
+   git clone https://github.com/yourusername/automatic-light-control-gps.git
+   cd automatic-light-control-gps
+2. Open the project in the Arduino IDE:
+  - Launch Arduino IDE and open the .ino file.
+  - Make sure to install the necessary libraries through the Arduino Library Manager or by downloading them from GitHub.
+3. Upload the code to your Arduino:
+  - Select the correct board (Arduino Uno) and port.
+  - Click "Upload" to transfer the sketch to the Arduino.
 
-3. Install the required libraries:
+### Configuration
+  - Time Zone Offset: Adjust the time zone by changing the offset variable in the code. For example, for UTC-3, set offset = -3;.
+  - Schedules: Modify the schedules array to set different time intervals for turning the relay on and off. Each entry defines a start time and an end time in the format {hour, minute, second}.
 
-- TinyGPS++
-- NeoSWSerial
-You can install these libraries via the Arduino Library Manager (Sketch > Include Library > Manage Libraries...).
+### Usage
+Once the code is uploaded, the system will start:
 
-4. Adjust the time zone offset according to your location in the code:
-   ```bash
-   const int offset = -3; // Example for UTC-3
-5. Upload the code to your Arduino Uno.
+  - It will wait for a valid GPS signal.
+  - Once the GPS time is obtained and the local time is calculated, the system will check if the current time falls within any of the predefined time windows.
+  - The relay will turn on or off based on the schedule, and the current time and system status will be displayed on the LCD.
 
-## How It Works
-1. The Arduino continuously reads the time from the GPS module.
-2. The UTC time from the GPS is adjusted according to the offset to reflect the local time.
-3. The code checks if the current time falls within any of the predefined time windows.
-4. If the current time is within a time window, the relay is turned on; otherwise, it is turned off.
-5. The current time and the relay state are printed to the serial monitor for debugging purposes.
-
-## Customization
-- Time Windows: You can define up to three time windows for controlling the relay by adjusting the startHour, startMinute, startSecond, endHour, endMinute, and endSecond variables.
-   ```bash
-   int startHour1 = 16, startMinute1 = 0, startSecond1 = 0;
-   int endHour1 = 18, endMinute1 = 0, endSecond1 = 30;
-- Time Zone Offset: Adjust the offset variable to set your local time zone.
-
-## Example Output
-Here is an example of the serial output:
-
-**Time: 18:10:15
-TurnOn: 1 | Relay set to HIGH - On**
-
-## License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-## Author
-Andrés Zoppelletto - azoppe
-
-## Acknowledgments
-Libraries used: TinyGPS++, NeoSWSerial
+### Troubleshooting
+  - GPS not connecting: Make sure the GPS module has a clear view of the sky and is properly connected.
+  - LCD not displaying correctly: Verify that the correct I2C address is set in the code (usually 0x27 or 0x3F).
+  - Relay not working: Check the wiring and ensure the relay is powered correctly.
