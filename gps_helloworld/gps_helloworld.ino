@@ -1,31 +1,23 @@
-#include <NeoSWSerial.h>
-#include <TinyGPSPlus.h>
+#include <SoftwareSerial.h>
 
-// Definir los pines para el módulo GPS
-const int RXPin = 4, TXPin = 3;
-const uint32_t GPSBaud = 9600;
+SoftwareSerial gps(4,3);
 
-// Crear un objeto NeoSWSerial para la comunicación serial con el GPS
-NeoSWSerial neogps(RXPin, TXPin);
-TinyGPSPlus gps;
+char dato=' ';
 
-void setup() {
-  // Iniciar la comunicación serial con el monitor
-  Serial.begin(9600);
-  
-  // Iniciar la comunicación serial con el GPS
-  neogps.begin(GPSBaud);
-  gps.encode(neogps.read());
+void setup()
+{
+ Serial.begin(115200);            
+ gps.begin(9600); 
 
-  // Mensaje inicial en el monitor serial
-  Serial.println("Hello, GPS World!");
+ Serial.println("Hello, GPS World!");
 }
 
-void loop() {
-  // Verificar si hay datos disponibles del GPS
-  while (neogps.available()) {
-    // Leer un carácter del GPS y enviarlo al monitor serial
-    char c = neogps.read();
-    Serial.print(c);
+
+void loop()
+{
+  if(gps.available())
+  {
+    dato=gps.read();
+    Serial.print(dato);
   }
 }
