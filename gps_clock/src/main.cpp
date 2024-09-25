@@ -9,6 +9,7 @@
   Libraries Used:
   - TinyGPS++: To decode data from the GPS module.
   - NeoSWSerial: For serial communication with the GPS module.
+  - LiquidCrystal_I2C: For LED controlling.
   Notes:
   Make sure to adjust the time zone offset according to your location.
 */
@@ -19,19 +20,21 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-// GPS pin. RX Arduino = TX GPS 
+// GPS pin:
+// RX Arduino = TX GPS 
 // TX Arduino = RX GPS
 const int RXPin = 4, TXPin = 3;
+const int relayPin = 7, ledPin = 13, buttonPin = A1;
 const uint32_t GPSBaud = 9600;
 const int offset = -3;
 bool fixStatus, turnOn;
+bool backlightState = false; // Variable to track backlight state
+int buttonState = 0, lastButtonState = 0;
 
 // Creates objects
 TinyGPSPlus gps;
 NeoSWSerial neogps(RXPin, TXPin);
 LiquidCrystal_I2C lcd(0x27, 16, 2);  
-
-int relayPin = 7; // Relay
 
 // Define schedules using arrays
 const int NUM_SCHEDULES = 5;
@@ -39,9 +42,7 @@ const int schedules[NUM_SCHEDULES][6] = {
   // {hh_ini, mm_ini, ss_ini, hh_end, mm_end, ss_end}
   {9, 0, 0, 9, 0, 30},   
   {12, 0, 0, 12, 1, 0},
-  {21, 0, 0, 21, 1, 0}, 
-  {20, 27, 0, 20, 27, 30}, 
-  {20, 27, 35, 20, 27, 40} 
+  {21, 0, 0, 21, 1, 0}
 };
 
 bool checkGPSFix()
@@ -73,25 +74,53 @@ void setup() {
   Serial.begin(9600);
   neogps.begin(GPSBaud);
   lcd.init();
-  lcd.backlight();
+  
+  pinMode(buttonPin, INPUT_PULLUP);  // To set button as input
+  analogWrite(buttonPin, LOW);  // No pressed as default
+  pinMode(relayPin, OUTPUT); // To set relay as output
+  digitalWrite(relayPin, LOW); // Turn off by default
+  pinMode(ledPin, OUTPUT); // To set led as output
+  digitalWrite(ledPin, LOW); // Turn off by default
 
-  Serial.println("Waiting for GPS...");
+  lcd.backlight(); // Turn on backlight to see initialization messages
+
   writeToLCD(0, "Buscando GPS");
     while (!checkGPSFix())
     {
       ;
     }
-  Serial.println("Valid GPS signal established.");
   writeToLCD(0, "GPS Ok");
   writeToLCD(1, "");
 
   delay(1000);
 
-  pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, LOW); // Turn off by default
+  lcd.noBacklight(); // Turn off backlight after initialization
 }
 
 void loop() {
+  int valorAnalogico = analogRead(buttonPin);  // read button 
+  float voltage = valorAnalogico * (5.0 / 1023.0);  // convert into voltage
+
+  if (voltage > 1) {
+    buttonState = 1;
+  } else {
+    buttonState = 0;
+  }
+  delay(10);
+
+  // if button pressed, and wasn't pressed before
+  if ((buttonState == 1) & (lastButtonState == 0)) {
+      backlightState = !backlightState;
+      delay(10);
+      if (backlightState) {
+        lcd.backlight();
+      } else {
+        lcd.noBacklight();
+      }
+  }
+  
+  lastButtonState = buttonState;
+
   while (neogps.available() > 0) {
     gps.encode(neogps.read());
 
@@ -120,9 +149,6 @@ void loop() {
             (hour == endHour && minute == endMinute && second <= endSecond))) {
           turnOn = true;
           activeSchedule = i + 1;
-          Serial.print("TurnOn: ");
-          Serial.print(activeSchedule);
-          Serial.print(" |");
           break;
         }
       }
@@ -131,29 +157,21 @@ void loop() {
       char timeStr[9];
       char satStr[3];
 
-      // Format time string
+      // Format strings
       sprintf(timeStr, "%02d:%02d:%02d", hour, minute, second);
-
-      // Format satellites string
-      sprintf(satStr, "%d", gps.satellites.value());
-
-      // Print to Serial
-      Serial.print("Time: ");
-      Serial.print(timeStr);
-      Serial.print(" // Sat: ");
-      Serial.println(satStr);
+      sprintf(satStr, "%lu", gps.satellites.value());
 
       // Write to LCD
       writeToLCD(0, String(timeStr) + "/Sat:" + String(satStr));
 
       // Control the relay based on the time check
       if (turnOn) {
-        digitalWrite(relayPin, HIGH); // Turn on
-        Serial.print("Relay set to HIGH - On // ");
-        writeToLCD(1, "Prendido: " + String(activeSchedule));
+        digitalWrite(ledPin, HIGH);
+        digitalWrite(relayPin, HIGH);
+        writeToLCD(1, "Encendido: " + String(activeSchedule));
       } else {
-        digitalWrite(relayPin, LOW); // Turn off
-        Serial.print("Relay set to LOW - Off // ");
+        digitalWrite(ledPin, LOW);
+        digitalWrite(relayPin, LOW);
         writeToLCD(1, "Apagado");
       }
     }
