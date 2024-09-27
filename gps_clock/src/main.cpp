@@ -1,17 +1,20 @@
 /*
-  Project: Automatic Light Control Based on GPS Time
+  Project: Automatic Device Control Based on GPS Time
   Date: August 23, 2024
   Author: Andrés Zoppelletto
   Description:
   This code controls the turning on and off of a device at multiple times during the day using an Arduino Uno and a NEO-6M GPS module.
   The program retrieves the time from the GPS, converts it to the local time based on the specified time zone offset, and turns a relay 
-  connected to a light on or off based on the current time. Multiple time windows during the day are defined for automatic light control.
+  connected to a device on or off based on the current time. Multiple time windows during the day are defined for automatic light control.
+  It also shows the GPS state, time and schedule execution in a LCD.
   Libraries Used:
-  - TinyGPS++: To decode data from the GPS module.
   - NeoSWSerial: For serial communication with the GPS module.
-  - LiquidCrystal_I2C: For LED controlling.
+  - TinyGPS++: To decode data from the GPS module.
+  - Wire: To control LCD comunication.
+  - LiquidCrystal_I2C: For LCD controlling.
   Notes:
-  Make sure to adjust the time zone offset according to your location.
+  Make sure to adjust the time zone offset according to your location. It can be automatically defined based on the physical location 
+  using GPS, but it should also account for Daylight Saving Time (DST).
 */
 
 #include <Arduino.h>
@@ -30,23 +33,60 @@ const int offset = -3;
 bool fixStatus, turnOn;
 bool backlightState = false; // Variable to track backlight state
 int buttonState = 0, lastButtonState = 0;
+unsigned long lastTime = millis();
 
-// Creates objects
+// Creating objects
 TinyGPSPlus gps;
 NeoSWSerial neogps(RXPin, TXPin);
 LiquidCrystal_I2C lcd(0x27, 16, 2);  
 
 // Define schedules using arrays
-const int NUM_SCHEDULES = 5;
+const int NUM_SCHEDULES = 4;
 const int schedules[NUM_SCHEDULES][6] = {
-  // {hh_ini, mm_ini, ss_ini, hh_end, mm_end, ss_end}
-  {9, 0, 0, 9, 0, 30},   
+  // {hh24_ini, mm_ini, ss_ini, hh24_end, mm_end, ss_end}
+  {8, 0, 0, 8, 0, 30},   
   {12, 0, 0, 12, 1, 0},
   {21, 0, 0, 21, 1, 0}
 };
 
+// LCD writting function
+void writeToLCD(int line, const String& text) {
+  lcd.setCursor(0, line);
+  lcd.print(text);
+  for (int i = text.length(); i < 16; i++) {
+    lcd.print(" ");
+  }
+}
+
+void handleButtonPress() {
+  // Using an analog pin to avoid false positives. During testing, the digital pins were unreliable.
+  int valorAnalogico = analogRead(buttonPin);  // read button 
+  float voltage = valorAnalogico * (5.0 / 1023.0);  // convert into voltage
+
+  if (voltage > 1) {
+    buttonState = 1;
+  } else {
+    buttonState = 0;
+  }
+
+  // if button pressed, and wasn't pressed before
+  if ((buttonState == 1) & (lastButtonState == 0)) {
+      backlightState = !backlightState;
+      // delay(10);
+      if (backlightState) {
+        lcd.backlight();
+      } else {
+        lcd.noBacklight();
+      }
+  }
+  
+  lastButtonState = buttonState;
+}
+
+// GPS availability control
 bool checkGPSFix()
 {
+  handleButtonPress(); // It checks if button was pushed while checking for GPS
   while ((neogps.available() > 0))
   {
     if (gps.encode(neogps.read()))
@@ -62,11 +102,29 @@ bool checkGPSFix()
   }
   return 0;
 }
-void writeToLCD(int line, const String& text) {
-  lcd.setCursor(0, line);
-  lcd.print(text);
-  for (int i = text.length(); i < 16; i++) {
-    lcd.print(" ");
+
+// GPS global control
+void initializeGPS() {
+  digitalWrite(ledPin, LOW);
+  digitalWrite(relayPin, LOW);
+
+  lcd.backlight(); // Turn on backlight to see initialization messages
+
+  writeToLCD(0, "Buscando GPS");
+  writeToLCD(1, "");
+  while (!checkGPSFix()) {
+    ;
+  }
+  writeToLCD(0, "GPS encontrado");
+  writeToLCD(1, "");
+
+  delay(500);
+
+  // Keep the backlight in the last state based on the button. If it was never pushed, the backlight will turn off by default
+  if (backlightState) {
+    lcd.backlight();
+  } else {
+    lcd.noBacklight();
   }
 }
 
@@ -82,44 +140,12 @@ void setup() {
   pinMode(ledPin, OUTPUT); // To set led as output
   digitalWrite(ledPin, LOW); // Turn off by default
 
-  lcd.backlight(); // Turn on backlight to see initialization messages
-
-  writeToLCD(0, "Buscando GPS");
-    while (!checkGPSFix())
-    {
-      ;
-    }
-  writeToLCD(0, "GPS Ok");
-  writeToLCD(1, "");
-
-  delay(1000);
-
-  lcd.noBacklight(); // Turn off backlight after initialization
+  initializeGPS(); // Call to GPS init function
 }
 
 void loop() {
-  int valorAnalogico = analogRead(buttonPin);  // read button 
-  float voltage = valorAnalogico * (5.0 / 1023.0);  // convert into voltage
 
-  if (voltage > 1) {
-    buttonState = 1;
-  } else {
-    buttonState = 0;
-  }
-  delay(10);
-
-  // if button pressed, and wasn't pressed before
-  if ((buttonState == 1) & (lastButtonState == 0)) {
-      backlightState = !backlightState;
-      delay(10);
-      if (backlightState) {
-        lcd.backlight();
-      } else {
-        lcd.noBacklight();
-      }
-  }
-  
-  lastButtonState = buttonState;
+  handleButtonPress(); // Call to button press control
 
   while (neogps.available() > 0) {
     gps.encode(neogps.read());
@@ -175,5 +201,12 @@ void loop() {
         writeToLCD(1, "Apagado");
       }
     }
+    lastTime = millis();
+  }
+
+  // If lose the GPS data for certain period of time, it goes to the GPS global control function
+  unsigned long currentTime = millis();
+  if (currentTime - lastTime >= 1000) { // set to 1 second -> 1000 ms
+    initializeGPS(); // Call to GPS initialization global function
   }
 }

@@ -6,7 +6,7 @@ char dato=' ';
 
 void setup()
 {
- Serial.begin(115200);            
+ Serial.begin(9600);            
  gps.begin(9600); 
 
  Serial.println("Hello, GPS World!");
