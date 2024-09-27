@@ -41,7 +41,7 @@ NeoSWSerial neogps(RXPin, TXPin);
 LiquidCrystal_I2C lcd(0x27, 16, 2);  
 
 // Define schedules using arrays
-const int NUM_SCHEDULES = 4;
+const int NUM_SCHEDULES = 3;
 const int schedules[NUM_SCHEDULES][6] = {
   // {hh24_ini, mm_ini, ss_ini, hh24_end, mm_end, ss_end}
   {8, 0, 0, 8, 0, 30},   
