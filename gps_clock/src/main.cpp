@@ -27,7 +27,8 @@
 // RX Arduino = TX GPS 
 // TX Arduino = RX GPS
 const int RXPin = 4, TXPin = 3;
-const int relayPin = 7, ledPin = 13, buttonPin = A1;
+const int relayPin = 9, ledPin = 13, buttonPin = A1;
+const int PWMValue = 105;
 const uint32_t GPSBaud = 9600;
 const int offset = -3;
 bool fixStatus, turnOn;
@@ -193,7 +194,7 @@ void loop() {
       // Control the relay based on the time check
       if (turnOn) {
         digitalWrite(ledPin, HIGH);
-        digitalWrite(relayPin, HIGH);
+        analogWrite(relayPin, PWMValue);
         writeToLCD(1, "Encendido: " + String(activeSchedule));
       } else {
         digitalWrite(ledPin, LOW);
