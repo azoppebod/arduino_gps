@@ -39,8 +39,7 @@ The use of a GPS module ensures that the system remains synchronized with the co
   - VCC -> 5V
   - GND -> GND
 - **Relay Module**:
-  - IN -> Arduino Pin 7
-  - VCC -> 5V
+  - IN -> Arduino Pin 9 (PWM at 2v)
   - GND -> GND
 
 ### Installation
