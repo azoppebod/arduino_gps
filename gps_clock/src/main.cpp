@@ -28,7 +28,7 @@
 // TX Arduino = RX GPS
 const int RXPin = 4, TXPin = 3;
 const int relayPin = 9, ledPin = 13, buttonPin = A1, auxOverridePin = A2, overridePin = A3;
-const int PWMValue = 105;
+const int PWMValue = 63;
 const uint32_t GPSBaud = 9600;
 const int offset = -3;
 bool fixStatus, turnOn, manual;
@@ -98,12 +98,12 @@ void handleOverrideButtonPress() {
   if (overrideState != lastOverrideState) {
     manual = !manual;
 
-    if (!turnOn) {
-      if (manual) {
+    if (!turnOn) { // if schedule is off
+      if (manual) { // but button is pressed, then turn on
         digitalWrite(ledPin, HIGH);
         analogWrite(relayPin, PWMValue);
         writeToLCD(1, "ON: Manual");
-      } else {
+      } else { // if schedule is off, and button is not pressed anymore, then turn off
         digitalWrite(ledPin, LOW);
         digitalWrite(relayPin, LOW);
         writeToLCD(1, "OFF");
@@ -244,7 +244,7 @@ void loop() {
         digitalWrite(ledPin, HIGH);
         analogWrite(relayPin, PWMValue);
         writeToLCD(1, "ON: " + String(activeSchedule));
-      } else if (!manual) {
+      } else if (!manual) { // if button is not pressed and schedule finished, then turn off
         digitalWrite(ledPin, LOW);
         digitalWrite(relayPin, LOW);
         writeToLCD(1, "OFF");
